@@ -1,0 +1,23 @@
+# Package Managers
+package-lock.json
+package.json
+tsconfig.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Miscellaneous
+/.claude/
+/.omp/
+/.pi/
+/.opencode/
+/.codex/
+/.remember/
+/.svelte-kit/
+/.vscode/
+/static/
+/drizzle/
+/node_modules/
+
+*.md
