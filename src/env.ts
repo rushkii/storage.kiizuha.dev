@@ -8,7 +8,28 @@ export const variables = defineEnvVars({
   },
   DATABASE_URL: { description: 'The database connection string.' },
   ORIGIN: {
-    description: 'The app origin (base URL), e.g. `http://localhost:5173`.'
+    description:
+      'The app origin (base URL), e.g. `http://localhost:5173`. Required: Better Auth uses it as `baseURL` and the only trusted origin.',
+    schema: (value) => {
+      if (!value?.trim()) throw new Error('ORIGIN is required, e.g. `https://storage.kiizuha.dev`');
+
+      let url: URL;
+      try {
+        url = new URL(value.trim());
+      } catch {
+        throw new Error(`ORIGIN must be a valid URL, got "${value}"`);
+      }
+
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('ORIGIN must start with `http://` or `https://`');
+      }
+      if (url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+        throw new Error('ORIGIN must be an origin only (no path, query, hash or credentials)');
+      }
+
+      // Normalized: no trailing slash, lowercase host, default port dropped.
+      return url.origin;
+    }
   },
   BETTER_AUTH_SECRET: {
     description:
@@ -25,5 +46,5 @@ export const variables = defineEnvVars({
   },
   S3_ACCESS_KEY_ID: { description: 'Access key ID used to sign S3 requests.' },
   S3_SECRET_ACCESS_KEY: { description: 'Secret access key used to sign S3 requests.' },
-  S3_BUCKET: { description: 'Name of the bucket that stores user files.' },
+  S3_BUCKET: { description: 'Name of the bucket that stores user files.' }
 });
