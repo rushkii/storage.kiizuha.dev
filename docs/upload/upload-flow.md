@@ -12,6 +12,8 @@ This document describes uploading files, which works like Google Drive.
 
 - Opened from the folder page's Upload button; uploads go to that folder.
 - Drag and drop plus a file picker, multiple files.
+- Any file type is accepted. Files are stored as untrusted content (`application/octet-stream`, `attachment`); see [security.md](../security/security.md#principle-stored-files-are-untrusted-content).
+- A short disclaimer under the drop zone: "Files are stored as-is and never run or checked by the server. You are responsible for what you upload."
 
 ## Floating progress panel
 

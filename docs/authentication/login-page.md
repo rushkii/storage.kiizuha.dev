@@ -10,7 +10,7 @@ Public share pages (`/s/[token]`, see [share.md](../sharing/share.md)) never req
 
 ## Specifications
 
-- Admin-only. The admin account is registered with the Better Auth CLI; there is no sign-up UI.
+- Admin-only. Sign-up is disabled (`disableSignUp: true`); the admin account is created with the admin plugin's `auth.api.createUser` from a server-side script (see [security.md](../security/security.md)). There is no sign-up UI.
 - One "Username or email" input and one password input.
   - If the value contains `@`, sign in with email; otherwise sign in with username. Usernames match `USERNAME_CHARSET_PATTERN` (`src/lib/server/constants.ts`), so they never contain `@`.
 - Submit through a remote `form` function (`src/lib/remotes/`), not `+page.server.ts` actions.
@@ -21,7 +21,7 @@ Public share pages (`/s/[token]`, see [share.md](../sharing/share.md)) never req
   - banned user (admin plugin)
   - rate-limited
 - Sessions last 7 days without refresh (`SESSION_EXPIRES_IN_SEC`).
-- Remove `src/routes/demo/better-auth` once this page works.
+- Call `signInEmail` / `signInUsername` with `headers: getRequestEvent().request.headers`, or Better Auth skips rate limiting (see [security.md](../security/security.md)).
 
 ## Acceptance criteria
 

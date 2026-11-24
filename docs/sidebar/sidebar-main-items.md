@@ -13,6 +13,9 @@ This document describes the sidebar.
 
 - Categories group root folders, like Discord channel categories. Each category is collapsible; the collapsed state is remembered per browser.
 - A `+` icon on the right of each category header opens the "New folder" dialog.
+- Each folder shows a horizontal ⋯ button on hover (always visible on touch screens) with:
+  - **Rename**: opens the rename dialog.
+  - **Move to bin**: no confirmation, shows the "moved to bin" result dialog. When that folder is open, the app goes back home. Permanent delete happens only on the Bin page.
 - Only root folders (no parent) appear in the sidebar. Subfolders are reached from the folder page.
 - When no folder exists, the sidebar shows the default empty UI with a "New category" action.
 - Categories can be created and renamed. Deleting a category is only allowed when it has no folders.

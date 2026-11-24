@@ -37,7 +37,7 @@ While at least one item is selected, the header is replaced by a selection toolb
 | Move to bin | See below. |
 | ⋮ More | Rename (only when exactly one item is selected), Move to… (folder picker). |
 
-The row ⋮ menu offers the same actions for that single row.
+The row ⋮ menu offers the same actions for that single row. Right-clicking a row (table or grid) opens the same menu at the pointer and selects that row if it was not already selected. Right-clicking a row that is part of a selection of two or more items shows the selection toolbar actions for the whole selection instead. Touch keeps long-press for selection.
 
 ## Download
 
@@ -45,7 +45,7 @@ The row ⋮ menu offers the same actions for that single row.
 - **Several items or any folder**: folders are expanded to their files (binned items skipped), then split:
   - **Large files** (> 100 MB each) are never zipped. Each one is downloaded separately by the browser through its own presigned URL, triggered one after another.
   - **The other files** are packed into zip archives of at most 100 MB each. If they fit in 100 MB there is one zip; otherwise they are split into as many zips as needed. Folders keep their structure inside each zip.
-  - Each zip is streamed from R2 by `POST /api/download/zip` (form field `ids`, submitted as a regular form so the browser handles the download natively). The server rejects a request whose files exceed 100 MB in total.
+  - Each zip is streamed from R2 by `POST /api/download/zip` (form field `ids`, submitted as a regular form so the browser handles the download natively). The server rejects a request whose files exceed 100 MB in total. File bytes are copied into the zip as opaque data, never executed or extracted; response headers are fixed in [security.md](../security/security.md#principle-stored-files-are-untrusted-content).
 - **Dialog before downloading**: when the selection produces more than one download (any large file, or more than one zip), show a dialog before anything starts:
   - what will happen, e.g. "3 files are larger than 100 MB and will download separately. The other 12 files will download as 2 zip archives (100 MB max each)."
   - the list of the separate files with their sizes

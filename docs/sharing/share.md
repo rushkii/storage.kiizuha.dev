@@ -22,6 +22,7 @@ Route `/s/[token]`. No sidebar, no app chrome, `noindex`.
 - **File share**: the server load validates the share and redirects (302) to a fresh presigned URL with `Content-Disposition: attachment`. Share URLs are stable app URLs; presigned URLs are never handed out as share links.
 - **Listing share**: a simple data table (Name, Size, Download). Files in subfolders are grouped under accordion sections per subfolder. Each Download goes through `/s/[token]/f/[fileId]`, which checks the file belongs to the share, then redirects like a file share. No preview or video streaming.
 - Files in the bin are hidden. If nothing remains, the page shows the unavailable state.
+- Disclaimer in the listing share's page footer (a file share redirects straight to the download and has no page): "Files are shared by their uploader and are not checked by this service. Download and open them at your own risk." See [security.md](../security/security.md#principle-stored-files-are-untrusted-content).
 - Expired, revoked or unknown token: an "This link has expired or was removed" page (same response for all three).
 
 ## Acceptance criteria

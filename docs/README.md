@@ -53,6 +53,7 @@
 | ---- | --- |
 | Data model and scheduled jobs | [data-model.md](data-model.md) |
 | Login | [authentication/login-page.md](authentication/login-page.md) |
+| Security findings | [security/security.md](security/security.md) |
 | Sidebar | [sidebar/sidebar-main-items.md](sidebar/sidebar-main-items.md) |
 | Folder page, selection, move to bin | [folder/folder-page.md](folder/folder-page.md) |
 | Upload | [upload/upload-flow.md](upload/upload-flow.md) |
