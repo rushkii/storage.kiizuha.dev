@@ -25,10 +25,9 @@ export const auth = betterAuth({
   disabledPaths: [...AUTH_DISABLED_PATHS],
   advanced: {
     cookiePrefix: 'kz',
-    // Cloudflare sets `cf-connecting-ip` and overwrites any client value. Only safe while the
-    // origin is reachable through Cloudflare alone (Cloudflare Tunnel, or a firewall that only
-    // admits Cloudflare's IP ranges); otherwise a client can forge the header.
-    ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] }
+    // Caddy sets `x-real-ip` to the client IP and overwrites any client value. Only safe while
+    // the app is reachable through Caddy alone; otherwise a client can forge the header.
+    ipAddress: { ipAddressHeaders: ['x-real-ip'] }
   },
   plugins,
   hooks

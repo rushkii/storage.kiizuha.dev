@@ -71,16 +71,16 @@ Requirements: Node.js, pnpm, and Docker (for the local Postgres).
 
 ## Deploying with Docker
 
-`compose.prod.yaml` runs the whole stack on one server: Postgres, a one-off migration job, the app (adapter-node), and a Cloudflare Tunnel. The app port is bound to `127.0.0.1` only, so public traffic reaches it through the tunnel alone. That is required because Better Auth trusts the `cf-connecting-ip` header for rate limiting (see `docs/security/security.md`).
+`compose.prod.yaml` runs Postgres, a one-off migration job, and the app (adapter-node). HTTPS is handled by Caddy installed on the host. The app binds to `127.0.0.1` only, so public traffic reaches it through Caddy alone. That is required because Better Auth trusts the `x-real-ip` header Caddy sets for rate limiting (see `docs/security/security.md`).
 
-1. In Cloudflare Zero Trust, create a tunnel, add a public hostname pointing to `http://app:3000`, and copy its token.
+1. Point the domain's DNS `A`/`AAAA` record at the server (DNS only, no proxy).
 2. On the server, clone the repo and create `.env` from `.env.example`. Besides the app variables, fill in:
 
     | Variable | Purpose |
     | --- | --- |
     | `ORIGIN` | The public URL, e.g. `https://storage.kiizuha.dev` |
     | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Database credentials. Use a URL-safe password (`openssl rand -hex 24`) |
-    | `CLOUDFLARE_TUNNEL_TOKEN` | The tunnel token |
+    | `APP_PORT` | Host port the app binds on `127.0.0.1` (default `3000`); pick a free one |
 
     `DATABASE_URL` is ignored here; the stack builds it from the `POSTGRES_*` values. `APP_NAME` is inlined at build time, so rebuild after changing it.
 
@@ -91,6 +91,14 @@ Requirements: Node.js, pnpm, and Docker (for the local Postgres).
     ```
 
     The `migrate` service applies pending migrations and exits before `app` starts.
+
+4. Copy the site block from `Caddyfile` into the host's `/etc/caddy/Caddyfile` (keep the port in sync with `APP_PORT`) and reload Caddy:
+
+    ```sh
+    sudo systemctl reload caddy
+    ```
+
+    Keep `header_up X-Real-IP {client_ip}` in the block; without it the rate limiter has no client IP.
 
 To update, pull and run the same command again. Logs: `docker compose -f compose.prod.yaml logs -f app`.
 

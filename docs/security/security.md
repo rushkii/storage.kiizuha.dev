@@ -68,23 +68,21 @@ The `sv add` demo login action (`src/routes/demo/better-auth/login/+page.server.
 
 **Fix.**
 
-1. Done: `src/lib/server/auth.ts` reads the client IP from `cf-connecting-ip` only. Cloudflare sets this header on every proxied request and overwrites any value the client sent:
+1. Done: `src/lib/server/auth.ts` reads the client IP from `x-real-ip` only. Caddy (`Caddyfile`) sets this header to the client IP on every proxied request and overwrites any value the client sent:
 
    ```ts
    advanced: {
      cookiePrefix: 'kz',
-     ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] }
+     ipAddress: { ipAddressHeaders: ['x-real-ip'] }
    }
    ```
 
 2. Done: `src/routes/demo/` is deleted. The real login page must pass `headers: getRequestEvent().request.headers` to `signInEmail`, or the rate limiter is skipped again.
-3. **To do at deploy:** the origin server must accept traffic from Cloudflare only, or anyone can hit it directly with a forged `cf-connecting-ip`. Either:
-   - run it behind Cloudflare Tunnel (`cloudflared`) with no public port, or
-   - firewall the public port to [Cloudflare's IP ranges](https://www.cloudflare.com/ips/).
+3. Done: `compose.prod.yaml` binds the app to `127.0.0.1` only, so from outside the server it is reachable only through the host's Caddy. Never bind it to a public interface, or anyone can hit it directly with a forged `x-real-ip`. The DNS record is DNS only, so clients connect to Caddy directly and `{client_ip}` is their real address. If the record is ever switched to proxied (Cloudflare's orange cloud), add Cloudflare's ranges to Caddy's `trusted_proxies` and read `CF-Connecting-IP`, or every request is counted under a Cloudflare edge IP.
 
 Notes:
 
-- Rate limiting is on in production only. In local dev there is no `cf-connecting-ip`, so sessions store no IP address; that is expected.
+- Rate limiting is on in production only. In local dev there is no `x-real-ip`, so sessions store no IP address; that is expected.
 - Optional: `rateLimit.storage: 'database'` keeps counters across restarts. The default in-memory storage is fine for a single instance.
 
 ## 4. Uploaded HTML/SVG served inline

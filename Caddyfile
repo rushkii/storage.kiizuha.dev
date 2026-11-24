@@ -1,0 +1,12 @@
+# Site block for the host's Caddy. Copy it into /etc/caddy/Caddyfile and reload Caddy.
+# The port must match APP_PORT in `.env`.
+storage.kiizuha.dev {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3000 {
+		# Better Auth rate-limits by this header. Overwrite whatever the client sent.
+		# Behind another proxy (e.g. Cloudflare's orange cloud), add its ranges to
+		# `trusted_proxies` in the global options so {client_ip} resolves to the real client.
+		header_up X-Real-IP {client_ip}
+	}
+}
