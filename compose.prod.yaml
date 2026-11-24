@@ -3,6 +3,10 @@
 # Run with: docker compose -f compose.prod.yaml up -d --build
 # Values come from `.env` (see `.env.example`).
 
+# Own project name, so containers and the `pgdata` volume never mix with the dev stack in
+# `compose.yaml`, which shares this folder's default project name.
+name: storage-prod
+
 x-app-env: &app-env
   env_file: .env
   environment:
