@@ -1,16 +1,35 @@
 import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { getRequestEvent } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
+import { hooks, plugins, AUTH_DISABLED_PATHS } from './better-auth/index.ts';
+import { SESSION_EXPIRES_IN_SEC } from './constants.ts';
 
 export const auth = betterAuth({
   baseURL: ORIGIN,
+  trustedOrigins: [ORIGIN],
   secret: BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: 'pg' }),
-  emailAndPassword: { enabled: true },
-  plugins: [
-    sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
-  ]
+  emailAndPassword: {
+    enabled: true,
+    // Single admin account: no public sign-up. Create the account with the admin plugin's
+    // `auth.api.createUser` from a server-side script. Called without headers it runs as a
+    // trusted call, so never expose it through a route or remote function.
+    disableSignUp: true,
+    requireEmailVerification: false
+  },
+  session: {
+    expiresIn: SESSION_EXPIRES_IN_SEC,
+    disableSessionRefresh: true
+  },
+  disabledPaths: [...AUTH_DISABLED_PATHS],
+  advanced: {
+    cookiePrefix: 'kz',
+    // Cloudflare sets `cf-connecting-ip` and overwrites any client value. Only safe while the
+    // origin is reachable through Cloudflare alone (Cloudflare Tunnel, or a firewall that only
+    // admits Cloudflare's IP ranges); otherwise a client can forge the header.
+    ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] }
+  },
+  plugins,
+  hooks
 });
