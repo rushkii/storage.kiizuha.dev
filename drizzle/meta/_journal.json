@@ -8,6 +8,27 @@
       "when": 1794902297348,
       "tag": "0000_woozy_marvel_apes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795110504966,
+      "tag": "0001_absent_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795117638321,
+      "tag": "0002_app_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795117653671,
+      "tag": "0003_drop_demo_task",
+      "breakpoints": true
     }
   ]
 }
