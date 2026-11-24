@@ -1,0 +1,13 @@
+{
+  "languages": {
+    "Svelte": {
+      "tab_size": 2
+    },
+    "TypeScript": {
+      "tab_size": 2
+    },
+    "JavaScript": {
+      "tab_size": 2
+    }
+  }
+}
