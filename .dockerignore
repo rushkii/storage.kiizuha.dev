@@ -1,0 +1,19 @@
+node_modules
+build
+.svelte-kit
+.git
+.env
+.env.*
+!.env.example
+
+# Editor and agent folders
+.claude
+.omp
+.remember
+.vscode
+.zed
+
+docs
+Dockerfile
+.dockerignore
+compose*.yaml

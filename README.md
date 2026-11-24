@@ -69,6 +69,31 @@ Requirements: Node.js, pnpm, and Docker (for the local Postgres).
 - The bucket's CORS policy must allow `PUT` from the app origin and expose the `ETag` header, otherwise multipart uploads fail.
 - R2 buckets have a default lifecycle rule that aborts incomplete multipart uploads 7 days after they start. Raise it (for example to 30 days) so the app's own cleanup rule applies instead.
 
+## Deploying with Docker
+
+`compose.prod.yaml` runs the whole stack on one server: Postgres, a one-off migration job, the app (adapter-node), and a Cloudflare Tunnel. The app port is bound to `127.0.0.1` only, so public traffic reaches it through the tunnel alone. That is required because Better Auth trusts the `cf-connecting-ip` header for rate limiting (see `docs/security/security.md`).
+
+1. In Cloudflare Zero Trust, create a tunnel, add a public hostname pointing to `http://app:3000`, and copy its token.
+2. On the server, clone the repo and create `.env` from `.env.example`. Besides the app variables, fill in:
+
+    | Variable | Purpose |
+    | --- | --- |
+    | `ORIGIN` | The public URL, e.g. `https://storage.kiizuha.dev` |
+    | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Database credentials. Use a URL-safe password (`openssl rand -hex 24`) |
+    | `CLOUDFLARE_TUNNEL_TOKEN` | The tunnel token |
+
+    `DATABASE_URL` is ignored here; the stack builds it from the `POSTGRES_*` values. `APP_NAME` is inlined at build time, so rebuild after changing it.
+
+3. Build and start:
+
+    ```sh
+    docker compose -f compose.prod.yaml up -d --build
+    ```
+
+    The `migrate` service applies pending migrations and exits before `app` starts.
+
+To update, pull and run the same command again. Logs: `docker compose -f compose.prod.yaml logs -f app`.
+
 ## Scripts
 
 | Command | Description |
