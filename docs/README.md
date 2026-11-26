@@ -55,6 +55,11 @@
 | Login | [authentication/login-page.md](authentication/login-page.md) |
 | Security findings | [security/security.md](security/security.md) |
 | Sidebar | [sidebar/sidebar-main-items.md](sidebar/sidebar-main-items.md) |
+| Sidebar footer | [sidebar/sidebar-footer.md](sidebar/sidebar-footer.md) |
+| Settings dialog and password confirmation | [account/settings/README.md](account/settings/README.md) |
+| Profile settings | [account/settings/profile-settings-page.md](account/settings/profile-settings-page.md) |
+| Security settings (change password) | [account/settings/security-page.md](account/settings/security-page.md) |
+| Sessions settings | [account/settings/sessions-page.md](account/settings/sessions-page.md) |
 | Folder page, selection, move to bin | [folder/folder-page.md](folder/folder-page.md) |
 | Upload | [upload/upload-flow.md](upload/upload-flow.md) |
 | Sharing and public pages | [sharing/share.md](sharing/share.md) |

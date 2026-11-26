@@ -2,7 +2,28 @@
 
 This document lists the app tables. Better Auth tables live in `src/lib/server/db/auth.schema.ts`; app tables live in `src/lib/server/db/schema.ts`. Every schema change follows the migration steps in `CLAUDE.md` (never `db:push`).
 
-All tables have `userId` (FK → `user.id`, cascade delete) so every query is scoped to the signed-in user, and `createdAt` / `updatedAt` timestamps.
+All app tables have `userId` (FK → `user.id`, cascade delete) so every query is scoped to the signed-in user, and `createdAt` / `updatedAt` timestamps.
+
+## Better Auth additions
+
+Extra fields on Better Auth tables, declared through Better Auth's `additionalFields` and generated with `pnpm auth:schema`.
+
+### user
+
+| Column | Notes |
+| ------ | ----- |
+| `image` | Built-in. Holds the avatar's R2 object key (`userObjectKey(userId, ...)`), not a URL. Null when there is no avatar. See [profile-settings-page.md](account/settings/profile-settings-page.md#avatar). |
+| `useGravatar` | boolean, default `false`. Show the Gravatar image when `image` is null. |
+
+### session
+
+| Column | Notes |
+| ------ | ----- |
+| `loginMode` | `idle_1h` \| `fixed_days` \| `until_logout`, chosen at login. See [login-page.md](authentication/login-page.md#session-length). |
+| `loginDays` | 1–90, set only for `fixed_days` |
+| `expiresAt` | Built-in. Slides forward for `idle_1h` and `until_logout`; fixed for `fixed_days`. |
+| `lastActiveAt` | Updated on requests, at most once per minute, for every mode. "Last activity" on the Sessions tab. |
+| `ipAddress`, `userAgent` | Built-in. Shown on the Sessions tab. |
 
 ## category
 
