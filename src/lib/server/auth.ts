@@ -18,9 +18,21 @@ export const auth = betterAuth({
     disableSignUp: true,
     requireEmailVerification: false
   },
+  user: {
+    additionalFields: {
+      // Show the Gravatar image when the user has no uploaded avatar.
+      useGravatar: { type: 'boolean', required: false, defaultValue: false, input: false }
+    }
+  },
   session: {
     expiresIn: SESSION_EXPIRES_IN_SEC,
-    disableSessionRefresh: true
+    // Expiry is managed per login option (`#server/session-activity.ts`), never by Better Auth.
+    disableSessionRefresh: true,
+    additionalFields: {
+      loginMode: { type: 'string', required: false, input: false },
+      loginDays: { type: 'number', required: false, input: false },
+      lastActiveAt: { type: 'date', required: false, input: false }
+    }
   },
   disabledPaths: [...AUTH_DISABLED_PATHS],
   advanced: {

@@ -3,6 +3,8 @@ import { isAPIError } from 'better-auth/api';
 import { form, getRequestEvent } from '$app/server';
 import { auth } from '#lib/server/auth.ts';
 import { safeRedirectPath } from '#server/guard.ts';
+import { takeAttempt } from '#server/rate-limit.ts';
+import { applyLoginMode } from '#server/session-activity.ts';
 import { signInSchema, type SignInFailure } from '#lib/schemas/storage.ts';
 
 const failureOf = (cause: unknown): SignInFailure | null => {
@@ -18,30 +20,43 @@ const failureOf = (cause: unknown): SignInFailure | null => {
 
 /**
  * Admin-only sign in; there is no sign-up. A value with `@` is an email,
- * anything else a username. Request headers are passed so Better Auth applies rate limiting.
- * One generic message for wrong credentials: never say which field was wrong.
+ * anything else a username. One generic message for wrong credentials: never say which field
+ * was wrong.
+ *
+ * Better Auth's limiter does not cover `auth.api.*` calls, so attempts are limited here. The login
+ * option decides the session's expiry: "an hour without use" also gets a browser-session cookie
+ * (`rememberMe: false`), so closing the browser ends it too.
  */
-export const signIn = form(signInSchema, async ({ identifier, _password, redirectTo }) => {
-  const { request } = getRequestEvent();
-  const headers = request.headers;
+export const signIn = form(
+  signInSchema,
+  async ({ identifier, _password, redirectTo, loginMode, loginDays }) => {
+    const { request } = getRequestEvent();
+    const headers = request.headers;
+    if (!takeAttempt('sign-in')) return { failure: 'rateLimited' as const };
 
-  try {
-    if (identifier.includes('@')) {
-      await auth.api.signInEmail({ body: { email: identifier, password: _password }, headers });
-    } else {
-      await auth.api.signInUsername({
-        body: { username: identifier, password: _password },
-        headers
-      });
+    const rememberMe = loginMode !== 'idle_1h';
+    let token: string | null;
+    try {
+      const result = identifier.includes('@')
+        ? await auth.api.signInEmail({
+            body: { email: identifier, password: _password, rememberMe },
+            headers
+          })
+        : await auth.api.signInUsername({
+            body: { username: identifier, password: _password, rememberMe },
+            headers
+          });
+      token = result?.token ?? null;
+    } catch (cause) {
+      const failure = failureOf(cause);
+      if (failure) return { failure };
+      throw cause;
     }
-  } catch (cause) {
-    const failure = failureOf(cause);
-    if (failure) return { failure };
-    throw cause;
-  }
 
-  redirect(303, safeRedirectPath(redirectTo));
-});
+    if (token) await applyLoginMode(token, loginMode, loginDays ?? null);
+    redirect(303, safeRedirectPath(redirectTo));
+  }
+);
 
 /** Form: ends the session and clears `locals.user` and `locals.session` for the rest of the request. */
 export const signOut = form(async () => {

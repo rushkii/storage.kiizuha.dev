@@ -3,6 +3,7 @@
   import ItemDialogs from '../item-dialogs.svelte';
   import UploadPanel from '../upload/upload-panel.svelte';
   import UploadDialog from '../upload/upload-dialog.svelte';
+  import SettingsDialog from '../settings/settings-dialog.svelte';
   import * as Sidebar from '#ui/sidebar';
 
   let { children } = $props();
@@ -20,3 +21,4 @@
 <ItemDialogs />
 <UploadDialog />
 <UploadPanel />
+<SettingsDialog />

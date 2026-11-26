@@ -21,6 +21,37 @@ export const formatShortDate = (date: Date, now = new Date()) => {
 export const formatLongDate = (date: Date) =>
   date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
+/** Date and time with the zone, e.g. "26 Nov 2026, 15:19 GMT+7". Formatted in the browser's zone. */
+export const formatZonedDate = (date: Date) =>
+  date.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60]
+];
+
+/** "Just now", "5 minutes ago", "in 3 days". */
+export const formatRelativeTime = (date: Date, now = new Date()) => {
+  const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
+  if (Math.abs(seconds) < 60) return 'Just now';
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(seconds) >= size) return format.format(Math.trunc(seconds / size), unit);
+  }
+  return 'Just now';
+};
+
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 /** Monday-based start of the week. */

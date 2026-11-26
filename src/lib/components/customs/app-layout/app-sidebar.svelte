@@ -17,6 +17,9 @@
   import { itemActions } from '#lib/hooks/item-actions.svelte.ts';
   import { signOut } from '#lib/remotes/auth.remote.ts';
   import { getSidebar } from '#lib/remotes/library.remote.ts';
+  import { getProfile } from '#lib/remotes/account.remote.ts';
+  import { settingsDialog } from '#lib/hooks/settings-dialog.svelte.ts';
+  import { setMode, userPrefersMode } from 'mode-watcher';
 
   import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
   import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
@@ -28,16 +31,25 @@
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import LogOutIcon from '@lucide/svelte/icons/log-out';
-
-  import avatarDefault from '#lib/assets/favicon.svg';
+  import SettingsIcon from '@lucide/svelte/icons/settings';
+  import SunMoonIcon from '@lucide/svelte/icons/sun-moon';
 
   let { ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
   const sidebar = Sidebar.useSidebar();
   const sidebarData = getSidebar();
 
-  const user = $derived(page.data.user);
+  const profileQuery = getProfile();
+  // The profile query has the avatar and follows profile edits; layout data covers the first paint.
+  const user = $derived(profileQuery.current ?? page.data.user);
+  const avatarUrl = $derived(profileQuery.current?.avatarUrl ?? null);
   const userInitials = $derived(getUserInitials(user?.name));
+
+  const THEMES = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' }
+  ] as const;
   const categories = $derived(sidebarData.current?.categories ?? []);
   const hasFolders = $derived(categories.some((cat) => cat.folders.length > 0));
 
@@ -96,7 +108,9 @@
 
 {#snippet userIdentity()}
   <Avatar.Root class="size-8 rounded-lg">
-    <Avatar.Image src={avatarDefault} alt={`${user?.username ?? user?.name}'s avatar`} />
+    {#if avatarUrl}
+      <Avatar.Image src={avatarUrl} alt={`${user?.username || user?.name}'s avatar`} />
+    {/if}
     <Avatar.Fallback>{userInitials}</Avatar.Fallback>
   </Avatar.Root>
   <div class="grid flex-1 text-start text-sm leading-tight">
@@ -350,6 +364,31 @@
                 {@render userIdentity()}
               </div>
             </DropdownMenu.Label>
+            <DropdownMenu.Separator />
+            <DropdownMenu.Group>
+              <DropdownMenu.Item onclick={() => settingsDialog.open('profile')}>
+                <SettingsIcon />
+                Settings
+              </DropdownMenu.Item>
+              <DropdownMenu.Sub>
+                <DropdownMenu.SubTrigger>
+                  <SunMoonIcon />
+                  Theme
+                </DropdownMenu.SubTrigger>
+                <DropdownMenu.SubContent class="min-w-36">
+                  <DropdownMenu.RadioGroup
+                    value={userPrefersMode.current}
+                    onValueChange={(value) => setMode(value as (typeof THEMES)[number]['value'])}
+                  >
+                    {#each THEMES as theme (theme.value)}
+                      <DropdownMenu.RadioItem value={theme.value}
+                        >{theme.label}</DropdownMenu.RadioItem
+                      >
+                    {/each}
+                  </DropdownMenu.RadioGroup>
+                </DropdownMenu.SubContent>
+              </DropdownMenu.Sub>
+            </DropdownMenu.Group>
             <DropdownMenu.Separator />
             <form {...signOut}>
               <DropdownMenu.Item onclick={signOutWithToast} disabled={signOut.pending > 0}>

@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { auth } from '#lib/server/auth.ts';
+import { touchSession } from '#lib/server/session-activity.ts';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
@@ -9,6 +10,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
   if (session) {
     event.locals.session = session.session;
     event.locals.user = session.user;
+    await touchSession(session.session);
   }
 
   return svelteKitHandler({ event, resolve, auth, building });

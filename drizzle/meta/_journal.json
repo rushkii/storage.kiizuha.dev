@@ -29,6 +29,13 @@
       "when": 1795117653671,
       "tag": "0003_drop_demo_task",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795717592899,
+      "tag": "0004_session_length_and_gravatar",
+      "breakpoints": true
     }
   ]
 }

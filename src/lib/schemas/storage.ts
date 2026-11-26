@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import { FILE_KINDS } from '#lib/file-kind.ts';
+import { DEFAULT_LOGIN_MODE, loginDaysSchema, loginModeSchema } from './account.ts';
 
 // Shared by remote functions (server validation) and forms (client `preflight`).
 // Remote modules cannot export schemas, so they live here.
@@ -61,11 +62,22 @@ export const newFolderSchema = v.object({
 
 export type SignInFailure = 'invalid' | 'banned' | 'rateLimited';
 
-export const signInSchema = v.object({
-  identifier: v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter your username or email.')),
-  _password: v.pipe(v.string(), v.minLength(1, 'Enter your password.')),
-  redirectTo: v.optional(v.string(), '/')
-});
+export const signInSchema = v.pipe(
+  v.object({
+    identifier: v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter your username or email.')),
+    _password: v.pipe(v.string(), v.minLength(1, 'Enter your password.')),
+    redirectTo: v.optional(v.string(), '/'),
+    loginMode: v.optional(loginModeSchema, DEFAULT_LOGIN_MODE),
+    loginDays: v.optional(loginDaysSchema)
+  }),
+  v.forward(
+    v.check(
+      (input) => input.loginMode !== 'fixed_days' || input.loginDays !== undefined,
+      'Enter a number of days.'
+    ),
+    ['loginDays']
+  )
+);
 
 const sortSchema = v.object({ id: v.pipe(v.string(), v.maxLength(64)), desc: v.boolean() });
 

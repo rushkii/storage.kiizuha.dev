@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, integer, index } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -16,7 +16,8 @@ export const user = pgTable('user', {
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires'),
-  username: text('username').unique()
+  username: text('username').unique(),
+  useGravatar: boolean('use_gravatar').default(false)
 });
 
 export const session = pgTable(
@@ -34,7 +35,10 @@ export const session = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    impersonatedBy: text('impersonated_by')
+    impersonatedBy: text('impersonated_by'),
+    loginMode: text('login_mode'),
+    loginDays: integer('login_days'),
+    lastActiveAt: timestamp('last_active_at')
   },
   (table) => [index('session_userId_idx').on(table.userId)]
 );
