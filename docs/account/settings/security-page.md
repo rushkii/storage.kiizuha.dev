@@ -14,9 +14,10 @@ A form with three password inputs and a "Change password" button:
 
 - Submit through a remote `form` function calling Better Auth `changePassword` with `revokeOtherSessions: true`.
 - Every other session is signed out; this browser stays signed in.
+- Better Auth does this by deleting every session of the user and creating a new one for this browser. The app copies the old session's `loginMode`, `loginDays` and `expiresAt` onto the new one, so the login option chosen at sign-in still applies. The new cookie always lives 90 days, even for "an hour without use"; the server-side 1-hour expiry still ends that session.
 - On success: the form clears and a toast says "Password changed. Other sessions were signed out."
 - Wrong current password: inline error under that field, nothing changes.
-- Rate-limited like login.
+- Rate-limited like login (`takeAttempt('password')`).
 
 ## Acceptance criteria
 

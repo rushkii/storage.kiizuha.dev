@@ -10,7 +10,9 @@ One form with a Save button. Save is disabled until something changed, and asks 
 | ----- | ----- |
 | Avatar | See [Avatar](#avatar). |
 | Username | Same rules as the login: `USERNAME_CHARSET_PATTERN`, normalized to lowercase, unique. |
-| Email | Valid email, unique. Changed directly, without a verification email, since the app sends no mail (Better Auth `changeEmail` with `updateEmailWithoutVerification: true`). |
+| Email | Valid email, unique. Changed directly, without a verification email, since the app sends no mail. |
+
+Username and email are written to the `user` row by the app after the password check (`updateProfile`, `src/lib/server/account.ts`), not through Better Auth's `/update-user` or `/change-email`, which are closed over HTTP (see [security.md](../../security/security.md#7-account-endpoints-skipped-the-password-prompt)). A taken username or email comes back as a field error.
 
 - Invalid fields show inline errors; nothing is saved until every field is valid and the password is correct.
 - After saving, the sidebar footer identity updates without a reload, and a toast says "Profile updated".
@@ -21,11 +23,12 @@ One form with a Save button. Save is disabled until something changed, and asks 
 - **Change**: pick a file (png, jpg, webp or avif, at most 2 MB), then a crop dialog opens:
   - square crop area, drag to move, slider or pinch to zoom
   - Cancel and Apply
-- Apply renders the crop in the browser to a 512 × 512 WebP. The form shows it as a preview; it is uploaded only on Save.
+- Apply renders the crop in the browser to a 512 × 512 WebP, or JPEG where the browser cannot encode WebP (Safari). The form shows it as a preview; it is uploaded only on Save.
+- The crop area also works from the keyboard: arrow keys move the image (Shift for bigger steps), `+` and `-` zoom. The mouse wheel zooms too.
 - **Remove** clears the avatar on Save.
 - On Save the server:
   - verifies the password,
-  - checks the image is a WebP (by its bytes, not the declared type) and at most 2 MB,
+  - checks the image is a WebP or JPEG (by its bytes, not the declared type) and at most 2 MB,
   - writes it to R2 under the user's prefix (`userObjectKey(userId, ...)`) with `putObject`, in memory only,
   - stores the key in `user.image` (see [data-model.md](../../data-model.md#user)) and deletes the previous avatar object.
 - **Checkbox** below the buttons: "Use Gravatar when I don't have an avatar image". Unchecked by default. Stored in `user.useGravatar` (see [data-model.md](../../data-model.md#user)) and saved with the rest of the form on Save.

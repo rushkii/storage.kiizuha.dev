@@ -33,4 +33,4 @@ The open tab lives in the URL search param `settings`:
   - Confirm shows a spinner and disables the input while the request runs.
 - The password is sent with the change itself, in the same remote function call, and checked on the server before anything is written. There is no separate "password verified" step whose result a later request could reuse.
 - Change password is the one exception: its form already has a "Current password" field, so it shows no extra prompt (see [security-page.md](security-page.md)).
-- Password checks are rate-limited like login.
+- Password checks go through Better Auth's `verifyPassword` and are rate-limited like login: 5 attempts per minute per client IP and user (`takeAttempt('password', userId)`, `src/lib/server/rate-limit.ts`).

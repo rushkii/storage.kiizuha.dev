@@ -31,6 +31,8 @@ Every stored file is untrusted content uploaded by a user. The app server and th
 | 3 | Rate limit and client IP behind a proxy | Medium | Fixed in code; deploy step pending |
 | 4 | Uploaded HTML/SVG served inline | Medium | Fixed |
 | 5 | S3 keys and prefixes outside the user's space | Medium | Fixed in `s3/`; rules for remote functions below |
+| 6 | Rate limiting skipped for server-side auth calls | Medium | Fixed |
+| 7 | Account endpoints skipped the password prompt | Medium | Fixed |
 
 ## 1. Open sign-up without email verification
 
@@ -77,13 +79,13 @@ The `sv add` demo login action (`src/routes/demo/better-auth/login/+page.server.
    }
    ```
 
-2. Done: `src/routes/demo/` is deleted. The real login page must pass `headers: getRequestEvent().request.headers` to `signInEmail`, or the rate limiter is skipped again.
+2. Done: `src/routes/demo/` is deleted. Passing `headers` to `signInEmail` turned out not to be enough: Better Auth's limiter never runs for `auth.api.*` calls, with or without headers. See [finding 6](#6-rate-limiting-skipped-for-server-side-auth-calls).
 3. Done: `compose.prod.yaml` binds the app to `127.0.0.1` only, so from outside the server it is reachable only through the host's Caddy. Never bind it to a public interface, or anyone can hit it directly with a forged `x-real-ip`. The DNS record is DNS only, so clients connect to Caddy directly and `{client_ip}` is their real address. If the record is ever switched to proxied (Cloudflare's orange cloud), add Cloudflare's ranges to Caddy's `trusted_proxies` and read `CF-Connecting-IP`, or every request is counted under a Cloudflare edge IP.
 
 Notes:
 
-- Rate limiting is on in production only. In local dev there is no `x-real-ip`, so sessions store no IP address; that is expected.
-- Optional: `rateLimit.storage: 'database'` keeps counters across restarts. The default in-memory storage is fine for a single instance.
+- Better Auth's rate limiting is on in production only, and only covers requests to `/api/auth/*` over HTTP. In local dev there may be no `x-real-ip`, so sessions can store no IP address; that is expected.
+- Optional: `rateLimit.storage: 'database'` keeps Better Auth's counters across restarts. The default in-memory storage is fine for a single instance.
 
 ## 4. Uploaded HTML/SVG served inline
 
@@ -122,3 +124,29 @@ Rules for remote functions and endpoints:
 - Call `assertUserKey(locals.user.id, row.key)` before any S3 call made with a stored key.
 - `uploadId` is bound to its key by S3, so a checked key plus the `uploadId` from the same `upload_session` row is enough for `createPartUploadUrl`, `completeMultipartUpload` and `abortMultipartUpload`.
 - The zip endpoint (`/api/download/zip`) and share pages follow the same rule: resolve ids to rows owned by the user (or by the share), never to raw keys.
+
+## 6. Rate limiting skipped for server-side auth calls
+
+**Problem.** Better Auth applies its rate limiter in its HTTP router (`onRequest`), so only requests that reach `/api/auth/*` over HTTP are counted. The login page signs in from a remote function through `auth.api.signInEmail` / `signInUsername`, which never pass through that router. Passing `headers` does not change this. Login attempts were therefore unlimited, and so would be every password check done through `auth.api.*`.
+
+**Fix.** `src/lib/server/rate-limit.ts` is an in-memory, fixed-window limiter: 5 attempts per minute, keyed by action, client IP (`x-real-ip`) and, where known, user id. It is used by:
+
+- sign-in (`takeAttempt('sign-in')` in `src/lib/remotes/auth.remote.ts`),
+- every password check in settings (`checkPassword` and `changePassword` in `src/lib/server/account.ts`).
+
+Rules:
+
+- Any new remote function that checks a password calls `takeAttempt` first and returns a "too many attempts" result when it is over the limit.
+- The limiter is per process. Running more than one app instance needs shared storage (Postgres or Redis) instead.
+
+## 7. Account endpoints skipped the password prompt
+
+**Problem.** Every settings change asks for the password (see [settings](../account/settings/README.md#password-confirmation)). Better Auth's own endpoints, such as `/update-user`, `/change-email`, `/change-password` and `/revoke-session`, were still open over HTTP, so any signed-in browser could change the username, email or sessions directly without that prompt.
+
+**Fix.** `src/lib/server/better-auth/disabled-path.config.ts` closes them over HTTP:
+
+`/update-user`, `/change-email`, `/change-password`, `/set-password`, `/delete-user`, `/verify-password`, `/list-sessions`, `/revoke-session`, `/revoke-sessions`, `/revoke-other-sessions`.
+
+`disabledPaths` only affects the HTTP router; `auth.api.*` calls from the server still work. Account changes go through the remote functions in `src/lib/remotes/account.remote.ts`, which check the password in the same request as the change.
+
+Rule: when a new Better Auth plugin or endpoint can change the account or its sessions, add its path here unless it is meant to be called from the browser.

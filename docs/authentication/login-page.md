@@ -20,7 +20,8 @@ Public share pages (`/s/[token]`, see [share.md](../sharing/share.md)) never req
   - invalid credentials: one generic message; never reveal which field is wrong
   - banned user (admin plugin)
   - rate-limited
-- Call `signInEmail` / `signInUsername` with `headers: getRequestEvent().request.headers`, or Better Auth skips rate limiting (see [security.md](../security/security.md)).
+- Call `signInEmail` / `signInUsername` with `headers: getRequestEvent().request.headers` so the session records the client IP and user agent.
+- Attempts are limited by the app's own limiter (`takeAttempt('sign-in')`, `src/lib/server/rate-limit.ts`): Better Auth's limiter does not cover `auth.api.*` calls (see [security.md](../security/security.md#6-rate-limiting-skipped-for-server-side-auth-calls)).
 - How long the session lasts is chosen at login (see [Session length](#session-length)).
 
 ## Session length
@@ -35,8 +36,11 @@ A radio group below the password input. The chosen option is stored on the sessi
 
 - The server validates the option and `n` (1–90); the client value is never trusted.
 - Activity (`lastActiveAt`, and the sliding expiry for `idle_1h` / `until_logout`) is written at most once per minute per session, so not every request hits the database.
-- The session cookie's lifetime follows the session's expiry.
-- This replaces the fixed 7-day session (`SESSION_EXPIRES_IN_SEC` with `disableSessionRefresh: true`).
+- Better Auth creates the session as usual (`expiresIn` = 90 days, `disableSessionRefresh: true`); right after sign-in the app overwrites the session's `expiresAt`, `loginMode`, `loginDays` and `lastActiveAt` for the chosen option (`applyLoginMode`, `src/lib/server/session-activity.ts`). The server-side expiry is what ends a session.
+- Cookie lifetime:
+  - `idle_1h`: signed in with `rememberMe: false`, so the cookie is a browser-session cookie and closing the browser also ends the session.
+  - `fixed_days` and `until_logout`: the cookie lives 90 days; the session row's expiry ends it earlier when due.
+- Sessions created before login options existed have no `loginMode`; they keep their fixed expiry.
 - Every session also ends on sign-out, on revoke from the [Sessions](../account/settings/sessions-page.md) tab, and when the password changes (all but the current one).
 
 ## Acceptance criteria

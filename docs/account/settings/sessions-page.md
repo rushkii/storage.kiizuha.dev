@@ -15,7 +15,7 @@ A shadcn `table` of active (not expired) sessions. The current session comes fir
 | Column | Content |
 | ------ | ------- |
 | Device | Browser and OS parsed from the user agent, e.g. "Firefox on Linux". The current session has a "This browser" badge. Below it, a small description of how the session ends (see below). |
-| IP address | `session.ipAddress`, or "—" when unknown (always unknown in local dev, see [security.md](../../security/security.md#3-rate-limit-and-client-ip-behind-a-proxy)). |
+| IP address | `session.ipAddress`, or "—" when unknown (see [security.md](../../security/security.md#3-rate-limit-and-client-ip-behind-a-proxy) for where it comes from). |
 | Last activity | Relative time ("5 minutes ago"), see [Times](#times). |
 | (no header) | "Sign out" button. Not shown on the current session's row. |
 
