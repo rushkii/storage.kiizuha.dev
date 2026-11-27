@@ -2,6 +2,7 @@
     "name": "storage.kiizuha.dev",
     "version": "0.0.1",
     "private": true,
+    "license": "MIT",
     "type": "module",
     "imports": {
         "#ui/*/index.js": "./src/lib/components/ui/*/index.ts",

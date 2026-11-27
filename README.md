@@ -150,3 +150,7 @@ Data fetching and mutations use SvelteKit remote functions. `+page.server.ts` an
 ## Documentation
 
 Feature specs, the data model, and security notes live in [`docs/`](docs/README.md).
+
+## License
+
+[MIT](LICENSE)
