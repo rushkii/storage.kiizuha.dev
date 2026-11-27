@@ -11,7 +11,10 @@ declare global {
       session?: AuthSession['session'];
     }
 
-    // interface Error {}
+    interface Error {
+      /** Set by `handleError` for unexpected errors, so a user can quote it. */
+      errorId?: string;
+    }
     // interface PageData {}
     // interface PageState {}
     // interface Platform {}
