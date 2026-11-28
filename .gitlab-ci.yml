@@ -12,7 +12,8 @@ variables:
   IMAGE_PLATFORM: linux/amd64
   # Inlined at build time. Override it in Settings > CI/CD > Variables.
   APP_NAME: Storage
-  npm_config_store_dir: $CI_PROJECT_DIR/.pnpm-store
+  # Inside the project so GitLab can cache it. Passed as a flag: pnpm 12 ignores npm_config_*.
+  PNPM_STORE: $CI_PROJECT_DIR/.pnpm-store
 
 default:
   image: $NODE_IMAGE
@@ -45,7 +46,7 @@ workflow:
     paths: [.pnpm-store]
   before_script:
     - npm install -g pnpm@$PNPM_VERSION
-    - pnpm install --frozen-lockfile
+    - pnpm install --frozen-lockfile --store-dir "$PNPM_STORE"
 
 check:
   extends: .pnpm
@@ -61,7 +62,7 @@ build-image:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - pnpm build
-    - pnpm install --prod --frozen-lockfile --ignore-scripts
+    - pnpm install --prod --frozen-lockfile --ignore-scripts --store-dir "$PNPM_STORE"
     # Same files the Dockerfile's runtime stage copies, as one layer under /app owned by root.
     - mkdir -p layer/app/scripts
     - cp -a build node_modules package.json drizzle layer/app/
