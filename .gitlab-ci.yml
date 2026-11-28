@@ -100,14 +100,20 @@ deploy:
   variables:
     DEPLOY_PATH: storage.kiizuha.dev
   before_script:
-    - apk add --no-cache openssh-client >/dev/null
+    - apk add --no-cache openssh-client openssh-keygen >/dev/null
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-    - chmod 600 "$SSH_PRIVATE_KEY"
+    # The variable form can drop the final newline or add CRLF, and OpenSSH then fails with
+    # "error in libcrypto". Rewrite every line without CR and with a trailing newline.
+    - awk '{ sub(/\r$/, ""); print }' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+    - chmod 600 ~/.ssh/deploy_key
+    - >-
+      ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+      || { echo "SSH_PRIVATE_KEY is not a valid private key" >&2; exit 1; }
   script:
     - >-
-      ssh -i "$SSH_PRIVATE_KEY" -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST"
+      ssh -i ~/.ssh/deploy_key -o BatchMode=yes -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST"
       "set -e; cd '$DEPLOY_PATH'; git pull --ff-only;
       export APP_IMAGE='$CI_REGISTRY_IMAGE' APP_TAG='$CI_COMMIT_SHA';
       docker compose -f compose.prod.yaml pull migrate app;
