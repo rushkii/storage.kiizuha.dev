@@ -90,7 +90,7 @@ Requirements: Node.js, pnpm, and Docker (for the local Postgres).
     docker compose -f compose.prod.yaml up -d --build
     ```
 
-    The `migrate` service applies pending migrations and exits before `app` starts.
+    The `migrate` service applies pending migrations and exits before `app` starts. Once the GitLab pipeline below is set up, the server pulls the built image instead of building it.
 
 4. Copy the site block from `Caddyfile` into the host's `/etc/caddy/Caddyfile` (keep the port in sync with `APP_PORT`) and reload Caddy:
 
@@ -100,7 +100,46 @@ Requirements: Node.js, pnpm, and Docker (for the local Postgres).
 
     Keep `header_up X-Real-IP {client_ip}` in the block; without it the rate limiter has no client IP.
 
-To update, pull and run the same command again. Logs: `docker compose -f compose.prod.yaml logs -f app`.
+To update by hand, pull and run the same command again. Logs: `docker compose -f compose.prod.yaml logs -f app`.
+
+### Deploying from GitLab CI
+
+`.gitlab-ci.yml` runs on [git.gnuweeb.net](https://git.gnuweeb.net/kiizuha/storage.kiizuha.dev):
+
+| Job | Runs on | Does |
+| --- | --- | --- |
+| `check` | Every branch and merge request | `pnpm check` and `pnpm lint` |
+| `image` | The default branch | Builds the app and pushes `registry.gnuweeb.net/kiizuha/storage.kiizuha.dev:<sha>` and `:latest` |
+| `deploy` | The default branch, once `VPS_HOST` is set | SSHes into the server, pulls the repo and the image, and restarts the stack |
+
+The instance runner can't run `docker build`, so the `image` job assembles the image with [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane) from the same files the Dockerfile's runtime stage copies. Change both when the runtime image changes.
+
+One-time setup:
+
+1. In the project, turn on instance runners (Settings → CI/CD → Runners).
+2. Create a deploy token with the `read_registry` scope (Settings → Repository → Deploy tokens) and log in with it on the server:
+
+    ```sh
+    docker login registry.gnuweeb.net
+    ```
+
+3. On the server, make sure `git pull` works without a prompt in the deploy folder, and that the deploy user is in the `docker` group.
+4. Create an SSH key for deploys, add its public key to the deploy user's `~/.ssh/authorized_keys`, and add these variables (Settings → CI/CD → Variables, all protected):
+
+    | Variable | Value |
+    | --- | --- |
+    | `SSH_PRIVATE_KEY` | The private key, as a **File** variable ending with a newline |
+    | `SSH_KNOWN_HOSTS` | Output of `ssh-keyscan -p <port> <host>` |
+    | `VPS_HOST` / `VPS_USER` | Server address and deploy user |
+    | `VPS_PORT` | SSH port, if not `22` |
+    | `DEPLOY_PATH` | Folder of the clone, relative to the deploy user's home (default `storage.kiizuha.dev`) |
+    | `APP_NAME` | Display name, if not `Storage`. Inlined into the image at build time |
+
+To roll back, run the previous commit's image on the server:
+
+```sh
+APP_TAG=<commit-sha> docker compose -f compose.prod.yaml up -d
+```
 
 ## Scripts
 

@@ -1,13 +1,22 @@
 # Production stack: Postgres, migrations and the app. HTTPS is handled by Caddy on the host
 # (see `Caddyfile`).
-# Run with: docker compose -f compose.prod.yaml up -d --build
 # Values come from `.env` (see `.env.example`).
+#
+# `app` and `migrate` run the same image. The GitLab pipeline builds it and pushes it to the
+# registry, and the deploy job runs `pull` then `up -d` with APP_TAG set to the commit SHA.
+# Without APP_TAG, `latest` is used. To build on the server instead, run
+# `docker compose -f compose.prod.yaml up -d --build`.
 
 # Own project name, so containers and the `pgdata` volume never mix with the dev stack in
 # `compose.yaml`, which shares this folder's default project name.
 name: storage-prod
 
-x-app-env: &app-env
+x-app: &app
+  image: ${APP_IMAGE:-registry.gnuweeb.net/kiizuha/storage.kiizuha.dev}:${APP_TAG:-latest}
+  build:
+    context: .
+    args:
+      APP_NAME: ${APP_NAME:-Storage}
   env_file: .env
   environment:
     DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -29,22 +38,15 @@ services:
       retries: 10
 
   migrate:
-    build:
-      context: .
-      target: migrate
-    <<: *app-env
+    <<: *app
+    command: ['node', 'scripts/migrate.js']
     restart: 'no'
     depends_on:
       db:
         condition: service_healthy
 
   app:
-    build:
-      context: .
-      target: runtime
-      args:
-        APP_NAME: ${APP_NAME:-Storage}
-    <<: *app-env
+    <<: *app
     restart: unless-stopped
     # Loopback only: just the host's Caddy reaches the app, which keeps `x-real-ip` trustworthy.
     ports:

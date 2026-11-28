@@ -18,8 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Settings entry, Theme submenu, avatar and Log out in the sidebar footer.
 - Error pages for 404, 403, 410, 5xx and 503, each with signed-in and guest variants. Unexpected errors get a short ID shown on the page and in the server log.
 - Radio group UI component.
+- GitLab CI/CD on git.gnuweeb.net: checks every branch, builds the production image with crane, pushes it to the project's registry and deploys it to the server over SSH.
 
 ### Changed
+
+- The production image now runs migrations itself (`node scripts/migrate.js`) with drizzle-orm's migrator, so the separate `migrate` image with the full dependency tree is gone. `drizzle-orm` and `postgres` moved to `dependencies`.
+- `compose.prod.yaml` runs `app` and `migrate` from the registry image (`APP_TAG`, default `latest`) and can still build it on the server with `--build`.
 
 - Share links that fail with a server error now show the server error page instead of the link-unavailable page. The link-unavailable page is redesigned on the same shell as the other error pages.
 

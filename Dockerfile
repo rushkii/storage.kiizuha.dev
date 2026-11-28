@@ -8,17 +8,10 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN npm install -g pnpm@${PNPM_VERSION} && pnpm --version
 WORKDIR /app
 
-# Full dependency tree: needed to build and to run drizzle-kit migrations.
+# Full dependency tree: needed to build.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# Runs `drizzle-kit migrate` against DATABASE_URL, then exits.
-FROM deps AS migrate
-COPY drizzle.config.ts ./
-COPY drizzle ./drizzle
-COPY src/lib/server/db ./src/lib/server/db
-CMD ["pnpm", "db:migrate"]
 
 FROM deps AS build
 # APP_NAME is a static public variable, inlined at build time.
@@ -38,6 +31,8 @@ FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
+# Keep in sync with the `image` job in `.gitlab-ci.yml`, which assembles the same files with crane.
+# The image also runs migrations: `node scripts/migrate.js` (the `migrate` service in compose).
 FROM node:${NODE_VERSION}-slim AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
@@ -46,6 +41,8 @@ WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY package.json ./
+COPY drizzle ./drizzle
+COPY scripts/migrate.js ./scripts/
 USER node
 EXPOSE 3000
 CMD ["node", "build"]

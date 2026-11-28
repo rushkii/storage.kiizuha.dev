@@ -33,3 +33,6 @@ vite.config.ts.timestamp-*
 
 # Demo
 src/**/demo/
+
+# GitLab CI pnpm cache
+/.pnpm-store

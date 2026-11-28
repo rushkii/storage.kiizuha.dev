@@ -1,0 +1,114 @@
+# CI/CD on git.gnuweeb.net: check every branch, then on the default branch build the production
+# image, push it to this project's container registry and deploy it to the VPS.
+#
+# The instance runner has no Docker daemon, is not privileged and blocks user namespaces, so
+# `docker build` and buildah can't run there. The image is assembled with crane instead: the
+# built app becomes one layer appended to the same Node base image the Dockerfile uses.
+
+variables:
+  NODE_IMAGE: node:24-slim
+  PNPM_VERSION: 12.4.2
+  CRANE_VERSION: v0.20.3
+  IMAGE_PLATFORM: linux/amd64
+  # Inlined at build time. Override it in Settings > CI/CD > Variables.
+  APP_NAME: Storage
+  npm_config_store_dir: $CI_PROJECT_DIR/.pnpm-store
+
+default:
+  image: $NODE_IMAGE
+  # The instance runner only takes jobs tagged `shared`.
+  tags: [shared]
+  interruptible: true
+
+stages: [check, image, deploy]
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+.pnpm:
+  variables:
+    # SvelteKit validates the private variables during check and build but reads them at
+    # runtime. These placeholders only satisfy that validation, as in the Dockerfile.
+    DATABASE_URL: postgres://build:build@localhost:5432/build
+    ORIGIN: http://localhost
+    BETTER_AUTH_SECRET: build-placeholder
+    S3_ACCESS_KEY_ID: build
+    S3_SECRET_ACCESS_KEY: build
+    S3_BUCKET: build
+  cache:
+    key:
+      files: [pnpm-lock.yaml]
+    paths: [.pnpm-store]
+  before_script:
+    - npm install -g pnpm@$PNPM_VERSION
+    - pnpm install --frozen-lockfile
+
+check:
+  extends: .pnpm
+  stage: check
+  script:
+    - pnpm check
+    - pnpm lint
+
+image:
+  extends: .pnpm
+  stage: image
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - pnpm build
+    - pnpm install --prod --frozen-lockfile --ignore-scripts
+    # Same files the Dockerfile's runtime stage copies, as one layer under /app owned by root.
+    - mkdir -p layer/app/scripts
+    - cp -a build node_modules package.json drizzle layer/app/
+    - cp scripts/migrate.js layer/app/scripts/
+    - tar -C layer --owner=0 --group=0 --numeric-owner -cf app.tar app
+    - apt-get update -qq
+    - apt-get install -y -qq --no-install-recommends curl ca-certificates >/dev/null
+    - >-
+      curl -fsSL "https://github.com/google/go-containerregistry/releases/download/$CRANE_VERSION/go-containerregistry_Linux_x86_64.tar.gz"
+      | tar -xz -C /usr/local/bin crane
+    - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    # Pin the base to the digest of its single-platform image, so the build and the image match.
+    - BASE="$NODE_IMAGE@$(crane digest --platform "$IMAGE_PLATFORM" "$NODE_IMAGE")"
+    - >-
+      crane mutate "$BASE" --append app.tar
+      --workdir /app --user node
+      --env NODE_ENV=production --env HOST=0.0.0.0 --env PORT=3000
+      --exposed-ports 3000 --cmd node,build
+      --label "org.opencontainers.image.source=$CI_PROJECT_URL"
+      --label "org.opencontainers.image.revision=$CI_COMMIT_SHA"
+      --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    - crane tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" latest
+
+# Runs only once VPS_HOST is set. See "Deploying" in README.md for the variables it needs.
+deploy:
+  stage: deploy
+  image: alpine:3.22
+  interruptible: false
+  resource_group: production
+  environment:
+    name: production
+    url: https://storage.kiizuha.dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $VPS_HOST
+  variables:
+    DEPLOY_PATH: storage.kiizuha.dev
+  before_script:
+    - apk add --no-cache openssh-client >/dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 600 "$SSH_PRIVATE_KEY"
+  script:
+    - >-
+      ssh -i "$SSH_PRIVATE_KEY" -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST"
+      "set -e; cd '$DEPLOY_PATH'; git pull --ff-only;
+      export APP_IMAGE='$CI_REGISTRY_IMAGE' APP_TAG='$CI_COMMIT_SHA';
+      docker compose -f compose.prod.yaml pull migrate app;
+      docker compose -f compose.prod.yaml up -d;
+      docker image prune -f"
