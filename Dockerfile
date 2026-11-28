@@ -31,7 +31,7 @@ FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Keep in sync with the `image` job in `.gitlab-ci.yml`, which assembles the same files with crane.
+# Keep in sync with the `build-image` job in `.gitlab-ci.yml`, which assembles the same files with crane.
 # The image also runs migrations: `node scripts/migrate.js` (the `migrate` service in compose).
 FROM node:${NODE_VERSION}-slim AS runtime
 ENV NODE_ENV=production

@@ -54,7 +54,7 @@ check:
     - pnpm check
     - pnpm lint
 
-image:
+build-image:
   extends: .pnpm
   stage: image
   rules:

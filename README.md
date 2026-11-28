@@ -109,10 +109,10 @@ To update by hand, pull and run the same command again. Logs: `docker compose -f
 | Job | Runs on | Does |
 | --- | --- | --- |
 | `check` | Every branch and merge request | `pnpm check` and `pnpm lint` |
-| `image` | The default branch | Builds the app and pushes `registry.gnuweeb.net/kiizuha/storage.kiizuha.dev:<sha>` and `:latest` |
+| `build-image` | The default branch | Builds the app and pushes `registry.gnuweeb.net/kiizuha/storage.kiizuha.dev:<sha>` and `:latest` |
 | `deploy` | The default branch, once `VPS_HOST` is set | SSHes into the server, pulls the repo and the image, and restarts the stack |
 
-The instance runner can't run `docker build`, so the `image` job assembles the image with [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane) from the same files the Dockerfile's runtime stage copies. Change both when the runtime image changes.
+The instance runner can't run `docker build`, so the `build-image` job assembles the image with [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane) from the same files the Dockerfile's runtime stage copies. Change both when the runtime image changes.
 
 One-time setup:
 
